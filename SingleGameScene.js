@@ -101,6 +101,8 @@ class SingleGameScene extends Phaser.Scene {
   }
 
   applyPhysics(grounded) {
+    // yeah quite a mess, but it doesnt work
+
     if (grounded && threeBallGroup[1] == null) {
       this.stopBalls();
       return;
