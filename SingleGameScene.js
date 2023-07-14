@@ -18,6 +18,11 @@ var rotLCounter = 0;
 var ballYSpeed = 1;
 var ballXSpeed = 0;
 
+var allBalls;
+var staticBalls;
+var threeBalls;
+var collidedOnce = false;
+
 class SingleGameScene extends Phaser.Scene {
   // use phaser 3.60
   constructor() {
@@ -25,9 +30,9 @@ class SingleGameScene extends Phaser.Scene {
   }
 
   preload() {
-    this.allBalls = this.physics.add.group();
-    this.staticBalls = this.physics.add.group();
-    this.threeBalls = this.physics.add.group();
+    allBalls = this.physics.add.group();
+    staticBalls = this.physics.add.group();
+    threeBalls = this.physics.add.group();
   }
 
   create() {
@@ -68,10 +73,13 @@ class SingleGameScene extends Phaser.Scene {
     this.board.addChess(this.ball1, 4, 0, 0, true);
     this.board.addChess(this.ball2, 4, 1, 0, true);
     this.board.addChess(this.ball3, 5, 1, 0, true);
+    this.board.removeChess(this.ball1);
+    this.board.removeChess(this.ball2);
+    this.board.removeChess(this.ball3);
 
-    this.allBalls.add(this.ball1);
-    this.allBalls.add(this.ball2);
-    this.allBalls.add(this.ball3);
+    allBalls.add(this.ball1);
+    allBalls.add(this.ball2);
+    allBalls.add(this.ball3);
 
     rotRCounter = 0;
     rotLCounter = 0;
@@ -79,40 +87,22 @@ class SingleGameScene extends Phaser.Scene {
     ballYSpeed = 1;
     allowRotate = true;
 
-    this.threeBalls.add(this.ball1);
-    this.threeBalls.add(this.ball2);
-    this.threeBalls.add(this.ball3);
+    threeBalls.clear(false, false);
+    threeBalls.add(this.ball1);
+    threeBalls.add(this.ball2);
+    threeBalls.add(this.ball3);
 
     threeBallGroup[0] = this.ball1; // 0 rot
     threeBallGroup[2] = this.ball3; // 2 gelb
     threeBallGroup[4] = this.ball2; // 4 blau
-
-    this.physics.add.collider(this.threeBalls, this.staticBalls, this.applyPhysics, null, this);
   }
 
-  update() {
-    // consistently move the balls down
-    if (
-      this.ball1.y < this.board.tileXYToWorldXY(0, gridCountY - 1).y &&
-      this.ball2.y < this.board.tileXYToWorldXY(0, gridCountY - 1).y &&
-      this.ball3.y < this.board.tileXYToWorldXY(0, gridCountY - 1).y
-    ) {
-      if (this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE).isDown) {
-        this.ball1.setY(this.ball1.y + 10);
-        this.ball2.setY(this.ball2.y + 10);
-        this.ball3.setY(this.ball3.y + 10);
-      } else {
-        this.ball1.setY(this.ball1.y + 1);
-        this.ball2.setY(this.ball2.y + 1);
-        this.ball3.setY(this.ball3.y + 1);
-      }
-    } else {
-      this.tweens._active.forEach((tween) => {
-        tween.stop();
-      });
-      this.board.removeChess(this.ball1);
-      this.board.removeChess(this.ball2);
-      this.board.removeChess(this.ball3);
+  applyPhysics(grounded) {
+    if (grounded && threeBallGroup[1] == null) {
+      this.stopBalls();
+      return;
+    } else if (grounded) {
+      console.log("grounded vertical");
       this.board.addChess(
         this.ball1,
         this.board.worldXYToTileXY(this.ball1.x, this.ball1.y).x,
@@ -134,11 +124,173 @@ class SingleGameScene extends Phaser.Scene {
         0,
         true
       );
-      this.staticBalls.add(this.ball1);
-      this.staticBalls.add(this.ball2);
-      this.staticBalls.add(this.ball3);
-      this.createBall();
-      return;
+      for (let i = 1; i < 6; i += 2) {
+        var ballpos = this.board.worldXYToTileXY(threeBallGroup[i].x, threeBallGroup[i].y);
+        ballpos.z = 0;
+        var neighbor0 = this.board.getNeighborChess(ballpos, 0);
+        var neighbor1 = this.board.getNeighborChess(ballpos, 1);
+        var neighbor2 = this.board.getNeighborChess(ballpos, 2);
+        var neighbor3 = this.board.getNeighborChess(ballpos, 3);
+        var neighbor4 = this.board.getNeighborChess(ballpos, 4);
+        var neighbor5 = this.board.getNeighborChess(ballpos, 5);
+        var neighbors = [neighbor0, neighbor1, neighbor2, neighbor3, neighbor4, neighbor5];
+        neighbors[i + (1 % 6)] = null;
+        neighbors[i + (2 % 6)] = null;
+        neighbors.forEach((neighbor) => {
+          if (neighbor != null) {
+            var dx = neighbor.x - threeBallGroup[i].x;
+            var dy = neighbor.y - threeBallGroup[i].y;
+            var distance = Math.sqrt(dx * dx + dy * dy);
+            if (distance < 2 * radius) {
+              // collision
+              collidedOnce = true;
+              var overlap = 2 * radius - distance;
+              var angle = Math.atan2(dy, dx);
+              threeBallGroup[i].setX(threeBallGroup[i].x - Math.cos(angle) * overlap);
+              threeBallGroup[i].setY(threeBallGroup[i].y - Math.sin(angle) * overlap);
+            }
+          }
+        });
+      }
+    } else {
+      // ball pos 2
+      if (threeBallGroup[0] == null) {
+        for (let i = 1; i < 6; i += 2) {
+          var ballpos = this.board.worldXYToTileXY(threeBallGroup[i].x, threeBallGroup[i].y);
+          ballpos.z = 0;
+          var neighbor0 = this.board.getNeighborChess(ballpos, 0);
+          var neighbor1 = this.board.getNeighborChess(ballpos, 1);
+          var neighbor2 = this.board.getNeighborChess(ballpos, 2);
+          var neighbor3 = this.board.getNeighborChess(ballpos, 3);
+          var neighbor4 = this.board.getNeighborChess(ballpos, 4);
+          var neighbor5 = this.board.getNeighborChess(ballpos, 5);
+          var neighbors = [neighbor0, neighbor1, neighbor2, neighbor3, neighbor4, neighbor5];
+          if (neighbor1 != null && neighbor2 != null) {
+            this.stopBalls();
+            return;
+          }
+          neighbors.forEach((neighbor) => {
+            if (neighbor != null) {
+              var dx = neighbor.x - threeBallGroup[i].x;
+              var dy = neighbor.y - threeBallGroup[i].y;
+              var distance = Math.sqrt(dx * dx + dy * dy);
+              if (distance < 2 * radius) {
+                // collision
+                collidedOnce = true;
+                var overlap = 2 * radius - distance;
+                var angle = Math.atan2(dy, dx);
+                // print angle in degrees
+                threeBalls.getChildren().forEach((ball) => {
+                  ball.setX(ball.x - Math.cos(angle) * overlap);
+                  ball.setY(ball.y - Math.sin(angle) * overlap);
+                });
+              }
+            }
+          });
+        }
+      } else {
+        var checkHole = 0;
+        for (let i = 0; i < 5; i += 2) {
+          var ballpos = this.board.worldXYToTileXY(threeBallGroup[i].x, threeBallGroup[i].y);
+          ballpos.z = 0;
+          var neighbor0 = this.board.getNeighborChess(ballpos, 0);
+          var neighbor1 = this.board.getNeighborChess(ballpos, 1);
+          var neighbor2 = this.board.getNeighborChess(ballpos, 2);
+          var neighbor3 = this.board.getNeighborChess(ballpos, 3);
+          var neighbor4 = this.board.getNeighborChess(ballpos, 4);
+          var neighbor5 = this.board.getNeighborChess(ballpos, 5);
+          var neighbors = [neighbor0, neighbor1, neighbor2, neighbor3, neighbor4, neighbor5];
+          if (neighbor1 != null && neighbor2 != null) {
+            this.stopBalls();
+            return;
+          } else if ((i == 2 && neighbor1 != null) || (i == 4 && neighbor2 != null)) {
+            checkHole++;
+          }
+          if (checkHole == 2) {
+            this.stopBalls();
+            return;
+          }
+          neighbors.forEach((neighbor) => {
+            if (neighbor != null) {
+              var dx = neighbor.x - threeBallGroup[i].x;
+              var dy = neighbor.y - threeBallGroup[i].y;
+              var distance = Math.sqrt(dx * dx + dy * dy);
+              if (distance < 2 * radius) {
+                // collision
+                collidedOnce = true;
+                var overlap = 2 * radius - distance;
+                var angle = Math.atan2(dy, dx);
+                // print angle in degrees
+                threeBalls.getChildren().forEach((ball) => {
+                  ball.setX(ball.x - Math.cos(angle) * overlap);
+                  ball.setY(ball.y - Math.sin(angle) * overlap);
+                });
+              }
+            }
+          });
+        }
+      }
+    }
+  }
+
+  stopBalls() {
+    this.tweens._active.forEach((tween) => {
+      tween.stop();
+    });
+    collidedOnce = false;
+    this.board.addChess(
+      this.ball1,
+      this.board.worldXYToTileXY(this.ball1.x, this.ball1.y).x,
+      this.board.worldXYToTileXY(this.ball1.x, this.ball1.y).y,
+      0,
+      true
+    );
+    this.board.addChess(
+      this.ball2,
+      this.board.worldXYToTileXY(this.ball2.x, this.ball2.y).x,
+      this.board.worldXYToTileXY(this.ball2.x, this.ball2.y).y,
+      0,
+      true
+    );
+    this.board.addChess(
+      this.ball3,
+      this.board.worldXYToTileXY(this.ball3.x, this.ball3.y).x,
+      this.board.worldXYToTileXY(this.ball3.x, this.ball3.y).y,
+      0,
+      true
+    );
+    staticBalls.add(this.ball1);
+    staticBalls.add(this.ball2);
+    staticBalls.add(this.ball3);
+    this.createBall();
+  }
+
+  update() {
+    // consistently move the balls down
+    if (
+      this.ball1.y < this.board.tileXYToWorldXY(0, gridCountY - 1).y &&
+      this.ball2.y < this.board.tileXYToWorldXY(0, gridCountY - 1).y &&
+      this.ball3.y < this.board.tileXYToWorldXY(0, gridCountY - 1).y
+    ) {
+      if (collidedOnce) {
+        this.ball1.setY(this.ball1.y + 10);
+        this.ball2.setY(this.ball2.y + 10);
+        this.ball3.setY(this.ball3.y + 10);
+        this.applyPhysics(false, this);
+      } else {
+        if (this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE).isDown) {
+          this.ball1.setY(this.ball1.y + 10);
+          this.ball2.setY(this.ball2.y + 10);
+          this.ball3.setY(this.ball3.y + 10);
+        } else {
+          this.ball1.setY(this.ball1.y + 1);
+          this.ball2.setY(this.ball2.y + 1);
+          this.ball3.setY(this.ball3.y + 1);
+        }
+        this.applyPhysics(false, this);
+      }
+    } else {
+      this.applyPhysics(true, this);
     }
     // use A and D to move the balls sideways
     if (
@@ -192,10 +344,9 @@ class SingleGameScene extends Phaser.Scene {
         this.ball3.setX(this.ball3.x - xOffset);
       }
     }
-
-    // use W and S to rotate the ballgroup only once by 60 degrees
-
     if (this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.W).isDown) {
+      // use W and S to rotate the ballgroup only once by 60 degrees
+
       rotLCounter++;
       this.input.keyboard.removeKey(Phaser.Input.Keyboard.KeyCodes.W);
     }
@@ -349,16 +500,6 @@ class SingleGameScene extends Phaser.Scene {
         threeBallGroup[4] = null;
       }
     }
-  }
-
-  applyPhysics(colBall, staticBall) {
-    var angle = Math.atan(colBall.y - staticBall.y / colBall.x - staticBall.x);
-    console.log(angle * 2 * Math.PI);
-    this.threeBalls.getChildren().forEach((ball) => {
-      
-      ball.setX(Math.cos(angle) * radius + ball.x);
-      ball.setY(Math.sin(angle) * radius + ball.y);
-    });
   }
 }
 
