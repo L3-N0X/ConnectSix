@@ -95,142 +95,180 @@ class SingleGameScene extends Phaser.Scene {
     threeBallGroup[0] = this.ball1; // 0 rot
     threeBallGroup[2] = this.ball3; // 2 gelb
     threeBallGroup[4] = this.ball2; // 4 blau
+    threeBallGroup[1] = null;
+    threeBallGroup[3] = null;
+    threeBallGroup[5] = null;
   }
 
   applyPhysics(grounded) {
     if (grounded && threeBallGroup[1] == null) {
       this.stopBalls();
       return;
-    } else if (grounded) {
-      console.log("grounded vertical");
-      this.board.addChess(
-        this.ball1,
-        this.board.worldXYToTileXY(this.ball1.x, this.ball1.y).x,
-        this.board.worldXYToTileXY(this.ball1.x, this.ball1.y).y,
-        0,
-        true
-      );
-      this.board.addChess(
-        this.ball2,
-        this.board.worldXYToTileXY(this.ball2.x, this.ball2.y).x,
-        this.board.worldXYToTileXY(this.ball2.x, this.ball2.y).y,
-        0,
-        true
-      );
-      this.board.addChess(
-        this.ball3,
-        this.board.worldXYToTileXY(this.ball3.x, this.ball3.y).x,
-        this.board.worldXYToTileXY(this.ball3.x, this.ball3.y).y,
-        0,
-        true
-      );
-      for (let i = 1; i < 6; i += 2) {
-        var ballpos = this.board.worldXYToTileXY(threeBallGroup[i].x, threeBallGroup[i].y);
-        ballpos.z = 0;
-        var neighbor0 = this.board.getNeighborChess(ballpos, 0);
-        var neighbor1 = this.board.getNeighborChess(ballpos, 1);
-        var neighbor2 = this.board.getNeighborChess(ballpos, 2);
-        var neighbor3 = this.board.getNeighborChess(ballpos, 3);
-        var neighbor4 = this.board.getNeighborChess(ballpos, 4);
-        var neighbor5 = this.board.getNeighborChess(ballpos, 5);
-        var neighbors = [neighbor0, neighbor1, neighbor2, neighbor3, neighbor4, neighbor5];
-        neighbors[i + (1 % 6)] = null;
-        neighbors[i + (2 % 6)] = null;
-        neighbors.forEach((neighbor) => {
-          if (neighbor != null) {
-            var dx = neighbor.x - threeBallGroup[i].x;
-            var dy = neighbor.y - threeBallGroup[i].y;
-            var distance = Math.sqrt(dx * dx + dy * dy);
-            if (distance < 2 * radius) {
-              // collision
-              collidedOnce = true;
-              var overlap = 2 * radius - distance;
-              var angle = Math.atan2(dy, dx);
-              threeBallGroup[i].setX(threeBallGroup[i].x - Math.cos(angle) * overlap);
-              threeBallGroup[i].setY(threeBallGroup[i].y - Math.sin(angle) * overlap);
-            }
-          }
-        });
-      }
-    } else {
-      // ball pos 2
-      if (threeBallGroup[0] == null) {
-        for (let i = 1; i < 6; i += 2) {
-          var ballpos = this.board.worldXYToTileXY(threeBallGroup[i].x, threeBallGroup[i].y);
-          ballpos.z = 0;
-          var neighbor0 = this.board.getNeighborChess(ballpos, 0);
-          var neighbor1 = this.board.getNeighborChess(ballpos, 1);
-          var neighbor2 = this.board.getNeighborChess(ballpos, 2);
-          var neighbor3 = this.board.getNeighborChess(ballpos, 3);
-          var neighbor4 = this.board.getNeighborChess(ballpos, 4);
-          var neighbor5 = this.board.getNeighborChess(ballpos, 5);
-          var neighbors = [neighbor0, neighbor1, neighbor2, neighbor3, neighbor4, neighbor5];
-          if (neighbor1 != null && neighbor2 != null) {
-            this.stopBalls();
-            return;
-          }
-          neighbors.forEach((neighbor) => {
-            if (neighbor != null) {
-              var dx = neighbor.x - threeBallGroup[i].x;
-              var dy = neighbor.y - threeBallGroup[i].y;
-              var distance = Math.sqrt(dx * dx + dy * dy);
-              if (distance < 2 * radius) {
-                // collision
-                collidedOnce = true;
-                var overlap = 2 * radius - distance;
-                var angle = Math.atan2(dy, dx);
-                // print angle in degrees
-                threeBalls.getChildren().forEach((ball) => {
-                  ball.setX(ball.x - Math.cos(angle) * overlap);
-                  ball.setY(ball.y - Math.sin(angle) * overlap);
-                });
-              }
-            }
-          });
+    }
+    for (let i = 0; i < 6; i++) {
+      if (threeBallGroup[i] == null) continue;
+      var ballTileXY = this.board.worldXYToTileXY(threeBallGroup[i].x, threeBallGroup[i].y);
+      ballTileXY.z = 0;
+      var neighbor1 = this.board.getNeighborChess(ballTileXY, 1);
+      var neighbor2 = this.board.getNeighborChess(ballTileXY, 2);
+      if (neighbor1 != null && neighbor2 == null) {
+        var dx = neighbor1.x - threeBallGroup[i].x;
+        var dy = neighbor1.y - threeBallGroup[i].y;
+        var distance = Math.sqrt(dx * dx + dy * dy);
+        if (distance < 2 * radius) {
+          // collision
+          collidedOnce = true;
+          var overlap = 2 * radius - distance;
+          var angle = Math.atan2(dy, dx);
+          threeBallGroup[i].setX(threeBallGroup[i].x - Math.cos(angle) * overlap);
+          threeBallGroup[i].setY(threeBallGroup[i].y - Math.sin(angle) * overlap);
         }
-      } else {
-        var checkHole = 0;
-        for (let i = 0; i < 5; i += 2) {
-          var ballpos = this.board.worldXYToTileXY(threeBallGroup[i].x, threeBallGroup[i].y);
-          ballpos.z = 0;
-          var neighbor0 = this.board.getNeighborChess(ballpos, 0);
-          var neighbor1 = this.board.getNeighborChess(ballpos, 1);
-          var neighbor2 = this.board.getNeighborChess(ballpos, 2);
-          var neighbor3 = this.board.getNeighborChess(ballpos, 3);
-          var neighbor4 = this.board.getNeighborChess(ballpos, 4);
-          var neighbor5 = this.board.getNeighborChess(ballpos, 5);
-          var neighbors = [neighbor0, neighbor1, neighbor2, neighbor3, neighbor4, neighbor5];
-          if (neighbor1 != null && neighbor2 != null) {
-            this.stopBalls();
-            return;
-          } else if ((i == 2 && neighbor1 != null) || (i == 4 && neighbor2 != null)) {
-            checkHole++;
-          }
-          if (checkHole == 2) {
-            this.stopBalls();
-            return;
-          }
-          neighbors.forEach((neighbor) => {
-            if (neighbor != null) {
-              var dx = neighbor.x - threeBallGroup[i].x;
-              var dy = neighbor.y - threeBallGroup[i].y;
-              var distance = Math.sqrt(dx * dx + dy * dy);
-              if (distance < 2 * radius) {
-                // collision
-                collidedOnce = true;
-                var overlap = 2 * radius - distance;
-                var angle = Math.atan2(dy, dx);
-                // print angle in degrees
-                threeBalls.getChildren().forEach((ball) => {
-                  ball.setX(ball.x - Math.cos(angle) * overlap);
-                  ball.setY(ball.y - Math.sin(angle) * overlap);
-                });
-              }
-            }
-          });
+      } else if (neighbor1 == null && neighbor2 != null) {
+        var dx = neighbor2.x - threeBallGroup[i].x;
+        var dy = neighbor2.y - threeBallGroup[i].y;
+        var distance = Math.sqrt(dx * dx + dy * dy);
+        if (distance < 2 * radius) {
+          // collision
+          collidedOnce = true;
+          var overlap = 2 * radius - distance;
+          var angle = Math.atan2(dy, dx);
+          threeBallGroup[i].setX(threeBallGroup[i].x - Math.cos(angle) * overlap);
+          threeBallGroup[i].setY(threeBallGroup[i].y - Math.sin(angle) * overlap);
+        } else if (neighbor1 != null && neighbor2 != null) {
+          stopBalls();
         }
       }
     }
+    // else if (grounded) {
+    //   console.log("grounded vertical");
+    //   this.board.addChess(
+    //     this.ball1,
+    //     this.board.worldXYToTileXY(this.ball1.x, this.ball1.y).x,
+    //     this.board.worldXYToTileXY(this.ball1.x, this.ball1.y).y,
+    //     0,
+    //     true
+    //   );
+    //   this.board.addChess(
+    //     this.ball2,
+    //     this.board.worldXYToTileXY(this.ball2.x, this.ball2.y).x,
+    //     this.board.worldXYToTileXY(this.ball2.x, this.ball2.y).y,
+    //     0,
+    //     true
+    //   );
+    //   this.board.addChess(
+    //     this.ball3,
+    //     this.board.worldXYToTileXY(this.ball3.x, this.ball3.y).x,
+    //     this.board.worldXYToTileXY(this.ball3.x, this.ball3.y).y,
+    //     0,
+    //     true
+    //   );
+    //   for (let i = 1; i < 6; i += 2) {
+    //     var ballpos = this.board.worldXYToTileXY(threeBallGroup[i].x, threeBallGroup[i].y);
+    //     ballpos.z = 0;
+    //     var neighbor0 = this.board.getNeighborChess(ballpos, 0);
+    //     var neighbor1 = this.board.getNeighborChess(ballpos, 1);
+    //     var neighbor2 = this.board.getNeighborChess(ballpos, 2);
+    //     var neighbor3 = this.board.getNeighborChess(ballpos, 3);
+    //     var neighbor4 = this.board.getNeighborChess(ballpos, 4);
+    //     var neighbor5 = this.board.getNeighborChess(ballpos, 5);
+    //     var neighbors = [neighbor0, neighbor1, neighbor2, neighbor3, neighbor4, neighbor5];
+    //     neighbors[i + (1 % 6)] = null;
+    //     neighbors[i + (2 % 6)] = null;
+    //     neighbors.forEach((neighbor) => {
+    //       if (neighbor != null) {
+    //         var dx = neighbor.x - threeBallGroup[i].x;
+    //         var dy = neighbor.y - threeBallGroup[i].y;
+    //         var distance = Math.sqrt(dx * dx + dy * dy);
+    //         if (distance < 2 * radius) {
+    //           // collision
+    //           collidedOnce = true;
+    //           var overlap = 2 * radius - distance;
+    //           var angle = Math.atan2(dy, dx);
+    //           threeBallGroup[i].setX(threeBallGroup[i].x - Math.cos(angle) * overlap);
+    //           threeBallGroup[i].setY(threeBallGroup[i].y - Math.sin(angle) * overlap);
+    //         }
+    //       }
+    //     });
+    //   }
+    // } else {
+    //   // ball pos 2
+    //   if (threeBallGroup[0] == null) {
+    //     for (let i = 1; i < 6; i += 2) {
+    //       var ballpos = this.board.worldXYToTileXY(threeBallGroup[i].x, threeBallGroup[i].y);
+    //       ballpos.z = 0;
+    //       var neighbor0 = this.board.getNeighborChess(ballpos, 0);
+    //       var neighbor1 = this.board.getNeighborChess(ballpos, 1);
+    //       var neighbor2 = this.board.getNeighborChess(ballpos, 2);
+    //       var neighbor3 = this.board.getNeighborChess(ballpos, 3);
+    //       var neighbor4 = this.board.getNeighborChess(ballpos, 4);
+    //       var neighbor5 = this.board.getNeighborChess(ballpos, 5);
+    //       var neighbors = [neighbor0, neighbor1, neighbor2, neighbor3, neighbor4, neighbor5];
+    //       if (neighbor1 != null && neighbor2 != null) {
+    //         this.stopBalls();
+    //         return;
+    //       }
+    //       neighbors.forEach((neighbor) => {
+    //         if (neighbor != null) {
+    //           var dx = neighbor.x - threeBallGroup[i].x;
+    //           var dy = neighbor.y - threeBallGroup[i].y;
+    //           var distance = Math.sqrt(dx * dx + dy * dy);
+    //           if (distance < 2 * radius) {
+    //             // collision
+    //             collidedOnce = true;
+    //             var overlap = 2 * radius - distance;
+    //             var angle = Math.atan2(dy, dx);
+    //             // print angle in degrees
+    //             threeBalls.getChildren().forEach((ball) => {
+    //               ball.setX(ball.x - Math.cos(angle) * overlap);
+    //               ball.setY(ball.y - Math.sin(angle) * overlap);
+    //             });
+    //           }
+    //         }
+    //       });
+    //     }
+    //   } else {
+    //     var checkHole = 0;
+    //     for (let i = 0; i < 5; i += 2) {
+    //       var ballpos = this.board.worldXYToTileXY(threeBallGroup[i].x, threeBallGroup[i].y);
+    //       ballpos.z = 0;
+    //       var neighbor0 = this.board.getNeighborChess(ballpos, 0);
+    //       var neighbor1 = this.board.getNeighborChess(ballpos, 1);
+    //       var neighbor2 = this.board.getNeighborChess(ballpos, 2);
+    //       var neighbor3 = this.board.getNeighborChess(ballpos, 3);
+    //       var neighbor4 = this.board.getNeighborChess(ballpos, 4);
+    //       var neighbor5 = this.board.getNeighborChess(ballpos, 5);
+    //       var neighbors = [neighbor0, neighbor1, neighbor2, neighbor3, neighbor4, neighbor5];
+    //       if (neighbor1 != null && neighbor2 != null) {
+    //         this.stopBalls();
+    //         return;
+    //       } else if ((i == 2 && neighbor1 != null) || (i == 4 && neighbor2 != null)) {
+    //         checkHole++;
+    //       }
+    //       if (checkHole == 2) {
+    //         this.stopBalls();
+    //         return;
+    //       }
+    //       neighbors.forEach((neighbor) => {
+    //         if (neighbor != null) {
+    //           var dx = neighbor.x - threeBallGroup[i].x;
+    //           var dy = neighbor.y - threeBallGroup[i].y;
+    //           var distance = Math.sqrt(dx * dx + dy * dy);
+    //           if (distance < 2 * radius) {
+    //             // collision
+    //             collidedOnce = true;
+    //             var overlap = 2 * radius - distance;
+    //             var angle = Math.atan2(dy, dx);
+    //             // print angle in degrees
+    //             threeBalls.getChildren().forEach((ball) => {
+    //               ball.setX(ball.x - Math.cos(angle) * overlap);
+    //               ball.setY(ball.y - Math.sin(angle) * overlap);
+    //             });
+    //           }
+    //         }
+    //       });
+    //     }
+    //   }
+    // }
   }
 
   stopBalls() {
@@ -238,6 +276,14 @@ class SingleGameScene extends Phaser.Scene {
       tween.stop();
     });
     collidedOnce = false;
+    this.addBallsToChess();
+    staticBalls.add(this.ball1);
+    staticBalls.add(this.ball2);
+    staticBalls.add(this.ball3);
+    this.createBall();
+  }
+
+  addBallsToChess() {
     this.board.addChess(
       this.ball1,
       this.board.worldXYToTileXY(this.ball1.x, this.ball1.y).x,
@@ -259,10 +305,6 @@ class SingleGameScene extends Phaser.Scene {
       0,
       true
     );
-    staticBalls.add(this.ball1);
-    staticBalls.add(this.ball2);
-    staticBalls.add(this.ball3);
-    this.createBall();
   }
 
   update() {
