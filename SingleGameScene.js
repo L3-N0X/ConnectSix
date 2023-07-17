@@ -22,6 +22,7 @@ var allBalls;
 var staticBalls;
 var threeBalls;
 var collidedOnce = 0;
+var alignedCount = 0;
 
 class SingleGameScene extends Phaser.Scene {
   // use phaser 3.60
@@ -87,6 +88,7 @@ class SingleGameScene extends Phaser.Scene {
     ballYSpeed = 1;
     allowRotate = true;
     collidedOnce = 0;
+    alignedCount = 0;
 
     threeBalls.clear(false, false);
     threeBalls.add(this.ball1);
@@ -104,15 +106,18 @@ class SingleGameScene extends Phaser.Scene {
   applyPhysics(grounded) {
     for (let i = 0; i < 6; i++) {
       if (threeBallGroup[i] == null) continue;
-      console.log("applyPhysics");
+      // console.log("applyPhysics");
       if (grounded && threeBallGroup[1] == null) {
-        this.stopBalls(i);
+        console.log("grounded horizontal");
+        this.stopBalls(i, true);
         return;
       } else if (grounded) {
         console.log("Yeeehaw");
-        if (this.addBallsToChess(i)) {
-          console.log("addBallsToChess was true");
-          return;
+        if (alignedCount < 3) {
+          if (this.addBallsToChess(i)) {
+            console.log("addBallsToChess was true");
+            return;
+          }
         }
       }
       var ballTileXY = this.board.worldXYToTileXY(threeBallGroup[i].x, threeBallGroup[i].y);
@@ -122,51 +127,54 @@ class SingleGameScene extends Phaser.Scene {
       var nDownLeft = this.board.getNeighborChess(ballTileXY, 2);
       var nLeft = this.board.getNeighborChess(ballTileXY, 3);
       var nRight = this.board.getNeighborChess(ballTileXY, 0);
-
+      var neighbors = [nDownRight, nDownLeft, nLeft, nRight];
+      console.log(neighbors);
       if (nDownRight != null && nDownLeft == null) {
         var dx = nDownRight.x - threeBallGroup[i].x;
         var dy = nDownRight.y - threeBallGroup[i].y;
         var distance = Math.sqrt(dx * dx + dy * dy);
         if (distance < 2 * radius + 1) {
           // collision
-          // console.log("nDownRight");
+          console.log("nDownRight");
           collidedOnce++;
           var overlap = 2 * radius - distance;
-          if (overlap < 0.01 && overlap > -0.01) {
-            overlap = 0.1 * Math.sign(threeBallGroup[i].x - nDownRight.x);
-            // console.log("overlap1 weird");
+          if (Math.abs(overlap) < 0.1) {
+            overlap = 0.5 * Math.sign(nDownRight.x - threeBallGroup[i].x);
+            console.log("overlap1 weird" + overlap);
           }
           var angle = Math.atan2(dy, dx);
-          if (angle == Math.PI / 2 || angle == 0 || angle == Math.PI) {
+          if (Math.abs(angle - Math.PI / 2) < 0.01 || Math.abs(angle) < 0.01 || Math.abs(angle - Math.PI) < 0.01) {
             angle = 1.5 - 0.1 * Math.sign(nDownRight.x - threeBallGroup[i].x);
-            // console.log("angle1 weird");
+            console.log("angle1 weird");
           }
           threeBallGroup[i].setX(threeBallGroup[i].x - Math.cos(angle) * overlap);
+          console.log("xOffset: - " + Math.cos(angle) * overlap);
           threeBallGroup[i].setY(threeBallGroup[i].y - Math.sin(angle) * overlap);
+          console.log("yOffset: - " + Math.sin(angle) * overlap);
         }
       } else if (nDownRight == null && nDownLeft != null) {
         var dx = nDownLeft.x - threeBallGroup[i].x;
         var dy = nDownLeft.y - threeBallGroup[i].y;
         var distance = Math.sqrt(dx * dx + dy * dy);
         if (distance < 2 * radius + 1) {
-          // console.log("nDownLeft");
+          console.log("nDownLeft");
           // collision
           collidedOnce++;
           var overlap = 2 * radius - distance;
-          if (overlap < 0.01 && overlap > -0.01) {
-            overlap = 0.1 * Math.sign(nDownLeft.x - threeBallGroup[i].x);
-            // console.log("overlap2 weird");
+          if (Math.abs(overlap) < 0.1) {
+            overlap = 0.1 * Math.sign(threeBallGroup[i].x - nDownLeft.x);
+            console.log("overlap2 weird" + overlap);
           }
           var angle = Math.atan2(dy, dx);
-          if (angle == Math.PI / 2 || angle == 0 || angle == Math.PI) {
+          if (Math.abs(angle - Math.PI / 2) < 0.01 || Math.abs(angle) < 0.01 || Math.abs(angle - Math.PI) < 0.01) {
             angle = 1.5 + 0.1 * Math.sign(nDownLeft.x - threeBallGroup[i].x);
-            // console.log("angle2 weird");
+            console.log("angle2 weird");
           }
           threeBallGroup[i].setX(threeBallGroup[i].x - Math.cos(angle) * overlap);
           threeBallGroup[i].setY(threeBallGroup[i].y - Math.sin(angle) * overlap);
         }
       } else if (nDownRight != null && nDownLeft != null) {
-        // console.log("both neighbors");
+        console.log("both neighbors");
         var dx1 = nDownRight.x - threeBallGroup[i].x;
         var dy1 = nDownRight.y - threeBallGroup[i].y;
         var distance1 = Math.sqrt(dx1 * dx1 + dy1 * dy1);
@@ -179,8 +187,9 @@ class SingleGameScene extends Phaser.Scene {
           collidedOnce++;
           this.stopBalls(i);
         }
-      } else if (nDownRight == null && nDownLeft == null) {
+      } else if (nDownRight == null && nDownLeft == null && grounded) {
         // console.log("no neighbors");
+        collidedOnce++;
       } else if (nLeft != null || nRight != null) {
         // does nothing
         console.log("nLeft or nRight");
@@ -198,6 +207,7 @@ class SingleGameScene extends Phaser.Scene {
       }
 
       if (threeBallGroup[i].x < this.board.tileXYToWorldXY(0, gridCountX - 1).x) {
+        console.log("zu  weit left");
         threeBallGroup[i].setX(this.board.tileXYToWorldXY(0, gridCountY - 1).x);
         var ballTileXY = this.board.worldXYToTileXY(threeBallGroup[i].x, threeBallGroup[i].y);
         Phaser.Math.Clamp(ballTileXY.x, 0, gridCountX - 1);
@@ -206,6 +216,7 @@ class SingleGameScene extends Phaser.Scene {
         var nDownLeft = this.board.getNeighborChess(ballTileXY, 2);
         if (nDownRight != null) this.stopBalls(i);
       } else if (threeBallGroup[i].x > this.board.tileXYToWorldXY(gridCountX - 1, gridCountY - 1).x) {
+        console.log("zu  weit right");
         threeBallGroup[i].setX(this.board.tileXYToWorldXY(gridCountX - 1, gridCountY - 1).x);
         var ballTileXY = this.board.worldXYToTileXY(threeBallGroup[i].x, threeBallGroup[i].y);
         Phaser.Math.Clamp(ballTileXY.x, 0, gridCountX - 1);
@@ -217,12 +228,13 @@ class SingleGameScene extends Phaser.Scene {
     }
   }
 
-  stopBalls(i) {
+  stopBalls(i, grounded = false) {
+    console.log("stopBalls");
     this.tweens._active.forEach((tween) => {
       // todo get right tween with i
       tween.stop();
     });
-    if (this.addBallsToChess(i)) {
+    if (this.addBallsToChess(i, grounded)) {
       collidedOnce++;
       staticBalls.add(threeBallGroup[i]);
       console.log("collidedOnce: " + collidedOnce);
@@ -233,8 +245,9 @@ class SingleGameScene extends Phaser.Scene {
     }
   }
 
-  addBallsToChess(i) {
+  addBallsToChess(i, grounded = false) {
     console.log("addBallsToChess");
+    alignedCount++;
     var correctedX = this.board.worldXYToTileXY(threeBallGroup[i].x, threeBallGroup[i].y).x;
     var correctedY = this.board.worldXYToTileXY(threeBallGroup[i].x, threeBallGroup[i].y).y;
     if (correctedY % 2 == 0 && correctedX == gridCountX - 1) {
@@ -258,8 +271,9 @@ class SingleGameScene extends Phaser.Scene {
     //   }
     // }
     if (
-      this.board.getNeighborChess({ x: correctedX, y: correctedY, z: 0 }, 1) == null ||
-      this.board.getNeighborChess({ x: correctedX, y: correctedY, z: 0 }, 2) == null
+      (this.board.getNeighborChess({ x: correctedX, y: correctedY, z: 0 }, 1) == null ||
+        this.board.getNeighborChess({ x: correctedX, y: correctedY, z: 0 }, 2) == null) &&
+      !grounded
     ) {
       console.log("Can fall down");
       return false;
